@@ -1,0 +1,295 @@
+---
+title: 'Data Visualisation: Telling Visual Stories From Data'
+author: "Bevan Koopman"
+date: "11 /04/2017"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(ggplot2)
+require(reshape2)
+theme_set(theme_bw())
+```
+
+
+## Anscombe's quartet
+
+```{r}
+anscombe_m <- read.csv("datasets/anscombe_m.csv")
+summary(anscombe_m)
+```
+
+Checks the mean, variance for each dataset
+
+```{r}
+aggregate(y ~ Dataset, anscombe_m, mean)
+aggregate(x ~ Dataset, anscombe_m, mean)
+aggregate(y ~ Dataset, anscombe_m, var)
+aggregate(x ~ Dataset, anscombe_m, var)
+for(d in c("A", "B", "C", "D")) {
+  print(cor(anscombe_m[anscombe_m$Dataset==d,]$x, anscombe_m[anscombe_m$Dataset==d,]$y))
+}
+```
+
+Now plot the four different data sets
+```{r}
+ggplot(anscombe_m, aes(x=x, y=y)) + geom_point(size=3)  + facet_wrap(~Dataset) 
+```
+
+## Grammar of graphical elements
+
+### 1. The `Data` layer
+
+Have a look at the `diamonds` dataset.
+```{r}
+summary(diamonds)
+```
+
+
+
+### 2. The `Aesthetics` layer
+
+Now we map parts of the data to some graphical elements (x, y, color, size, etc)
+```{r}
+ggplot(diamonds, aes(x=carat, y=price)) 
+```
+
+Note, that there is no notion at the moment of the types of plot - that is the next layer!
+
+### 3. The `Geometries` layer
+
+Now we define a geometry (this case, a scatter geometry):
+```{r}
+ggplot(diamonds, aes(x=carat, y=price)) + geom_point(alpha=.4)
+```
+
+### 4. The `Facet` layer
+
+Now lets split the plot up by `clarity`:
+```{r}
+ggplot(diamonds, aes(x=carat, y=price)) + geom_jitter(alpha=.4) + facet_wrap(~clarity)
+```
+
+### 5. The `Statistics` layer
+
+Now let's add an graphical element that aids in understanding, namely a linear model:
+```{r}
+ggplot(diamonds, aes(x=carat, y=price)) + geom_jitter(alpha=.4) + facet_wrap(~clarity) + geom_smooth(method="lm", se=F)
+```
+
+
+### 6. The `Coordinates` layer
+
+Now let's ajust the scales and axis levels. Specifically, we'll restrict x-axis carat to be between 0 and 3, report x-axis carat in 0.5 increments, change y-axis price to be in dollar format and provide x and y axis labels.
+```{r}
+library(scales) # used to print things in dollar ($) format
+ggplot(diamonds, aes(x=carat, y=price)) + geom_jitter(alpha=.4) + facet_wrap(~clarity) + geom_smooth(method="lm", se=F) + scale_x_continuous(limits=c(0,3), breaks = seq(0,3, 0.5)) + scale_y_continuous(labels = dollar) + xlab("Mass (carat)") + ylab("Price (US$)")
+```
+
+### 6. The `Theme` layer
+
+Now just change the look and feel:
+```{r}
+ggplot(diamonds, aes(x=carat, y=price)) + geom_jitter(alpha=.4) + facet_wrap(~clarity) + geom_smooth(method="lm", se=F) + scale_x_continuous(limits=c(0,3), breaks = seq(0,3, 0.5)) + scale_y_continuous(labels = dollar) + xlab("Mass (carat)") + ylab("Price (US$)") + theme_minimal()
+```
+
+
+## Data that supports Visualisation
+
+Have a look at the `airquality` dataset.
+
+```{r}
+summary(airquality)
+```
+
+Get the `reshape2` package (not `reshape`).
+```{r}
+require(reshape2)
+```
+
+Look at the top 10 rows of the data:
+```{r}
+head(airquality)
+```
+
+
+Transform to long format.
+```{r, results='hide'}
+head(melt(airquality))
+```
+
+Tranform to long format but keep `Month` and `Day` as columns.
+```{r}
+long_airquality <- melt(airquality, id.vars=c('Month', 'Day'), variable.name = "Measurement")
+head(long_airquality)
+```
+
+Now the data is in a easier format for plotting.
+```{r}
+ggplot(long_airquality, aes(x=Month, y=value)) + geom_point() + facet_wrap(~Measurement, scales="free")
+```
+
+Calculate a montly average
+```{r}
+agg_long_airquality <- aggregate(value ~ Month + Measurement, long_airquality, mean)
+ggplot(agg_long_airquality, aes(x=Month, y=value)) + geom_point() + geom_line() + facet_wrap(~Measurement, scales="free")
+```
+
+But rather than calculate the average, why not just use a boxplot:
+```{r}
+ggplot(long_airquality, aes(x=Month, y=value)) + geom_jitter() + facet_wrap(~Measurement, scales="free") # the old way
+ggplot(long_airquality, aes(x=Month, y=value)) + geom_jitter() + facet_wrap(~Measurement, scales="free") + stat_summary(fun.y="mean", color="red", size=3, geom="point")
+ggplot(long_airquality, aes(x=factor(Month), y=value)) + geom_boxplot(varwidth = T) + facet_wrap(~Measurement, scales="free") + scale_x_discrete()
+```
+
+
+```{r}
+
+```
+
+## Different Plot Types
+
+Let's return to `diamonds` dataset and looks through a bunch of different plot types and what they show.
+
+Just a reminder of the diamonds dataset:
+```{r}
+summary(diamonds)
+```
+
+
+### The scatter plot
+
+```{r}
+ggplot(diamonds, aes(x=carat, y=price)) + geom_point()
+```
+
+Now let's add a visual distinction (as color) for diamond `clarity`:
+```{r}
+ggplot(diamonds, aes(x=carat, y=price, color=clarity)) + geom_point()
+```
+
+Now lets add another categorical dimension for the quality of the `cut` as the size:
+```{r}
+ggplot(diamonds, aes(x=carat, y=price, color=clarity, size=cut)) + geom_point()
+```
+
+### Trends
+
+Now let's apply a smoothing trend:
+```{r}
+ggplot(diamonds, aes(x=carat, y=price, color=clarity)) + geom_point() + geom_smooth(se=F)
+ggplot(diamonds, aes(x=carat, y=price, color=clarity)) + geom_smooth(se=F)
+```
+
+### Faceting
+
+The plot is pretty busy so lets rather divide things up according to the categorical data.
+
+First divide by cut:
+```{r}
+ggplot(diamonds, aes(x=carat, y=price, color=clarity)) + geom_point() + facet_wrap(~cut)
+```
+
+Maybe by clarity instead:
+```{r}
+ggplot(diamonds, aes(x=carat, y=price, color=cut)) + geom_point() + facet_wrap(~clarity)
+```
+
+And add a further facet for color:
+```{r}
+ggplot(diamonds, aes(x=carat, y=price, color=cut)) + geom_point() + facet_grid(color~clarity) + scale_color_grey()
+```
+
+### Barplot
+
+Barplot are used for make comparisons. Let's have a look at some climate data.
+```{r}
+global_temps <- read.table("647_Global_Temperature_Data_File.txt", col.names = c("Year", "TempChange", "TempChange5Year"))
+```
+
+The data shows change in global surface temperature for a 136-year period, relative to 1951-1980 average temperatures.
+
+```{r}
+ggplot(global_temps, aes(x=Year, y=TempChange)) + geom_bar(stat="identity")
+```
+
+Let's add the bounds for the comparitive years:
+```{r}
+ggplot(global_temps, aes(x=Year, y=TempChange)) + geom_bar(stat="identity") + geom_vline(xintercept=c(1951,1980), color="red")
+```
+
+
+### Line plots
+
+Line plots are designed to show trends. 
+
+Let's look at the change in temps over the years:
+```{r}
+ggplot(global_temps, aes(x=Year, y=TempChange)) + geom_line()
+```
+
+Sometimes we want a trend and to compare indvidual years - what should we do?:
+```{r}
+ggplot(global_temps, aes(x=Year, y=TempChange)) + geom_line() + geom_point()
+```
+
+And adding the five-year average:
+```{r}
+ggplot(global_temps, aes(x=Year, y=TempChange)) + geom_line() + geom_point() + geom_line(aes(y=TempChange5Year, color="red"))
+```
+
+But this is not nice - better to format your data to support vis - i.e., a long format:
+```{r}
+long_global_temps = melt(global_temps, id.vars = "Year", variable.name = "MeasurementType", value.name = "Degrees")
+```
+
+Now we can go a better job:
+```{r}
+ggplot(long_global_temps, aes(x=Year, y=Degrees, color=MeasurementType)) + geom_line() + geom_point(data=subset(long_global_temps, MeasurementType=="TempChange"))
+```
+
+### Histograms
+
+Histograms are used to convey an understanding about the distribution of your data. For example, the distribution on `price`:
+
+```{r}
+ggplot(diamonds, aes(x=price)) + geom_histogram()
+```
+
+```{r}
+ggplot(diamonds, aes(x=price, fill=cut)) + geom_histogram()
+```
+
+
+### Boxplots
+
+
+Box plots provide a way of showing distributions and averages. Let's return to the `airquality` dataset:
+```{r}
+ggplot(long_airquality, aes(x=Month, y=value)) + geom_jitter() + facet_wrap(~Measurement, scales="free") # the old way
+ggplot(long_airquality, aes(x=factor(Month), y=value, fill=Measurement)) + geom_boxplot(varwidth = T) + facet_wrap(~Measurement, scales="free") # the old way
+```
+
+What us going on with Ozone measurements for June:
+```{r}
+subset(long_airquality, Measurement=="Ozone" & Month==6)
+```
+
+### Heatmap
+
+A heat map is a two-dimensional representation of data in which values are represented by colors. A simple heat map provides an immediate visual summary of information. More elaborate heat maps allow the viewer to understand complex data sets.
+
+Let's use the diamond dataset to look at how clarity, color and price are related.
+
+First we will do some aggregation on the data:
+```{r}
+agg_diamonds <- aggregate(price ~ clarity + color, diamonds, mean)
+```
+
+
+```{r}
+ggplot(agg_diamonds, aes(x=clarity, y=color, fill=price)) + geom_tile(colour = "white") + scale_fill_gradient(low = "white", high = "steelblue")
+```
+
